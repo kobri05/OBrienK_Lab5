@@ -144,7 +144,8 @@ included in the `teacher_evals_codebook.pdf`.
 ```{r}
 #| label: setup
 # code chunk for loading packages
-
+library(dplyr)
+library(tidyverse)
 ```
 
 **2. Load in the `teacher_evals` data.** 
@@ -152,7 +153,7 @@ included in the `teacher_evals_codebook.pdf`.
 ```{r}
 #| label: load-data
 # code chunk for importing the data
-
+teacher <- read_csv("raw_data/teacher_evals.csv")
 ```
 
 ### Data Inspection + Summary
@@ -162,8 +163,9 @@ included in the `teacher_evals_codebook.pdf`.
 ```{r}
 #| label: explore-data
 # you may want to use code to answer this question
-
+glimpse(teacher)
 ```
+This dataset contains a variety of data types, including 
 
 **4. What is the unit of observation (i.e. a single row in the dataset) identified by?**
 
