@@ -2,6 +2,7 @@
 title: "Lab 5- Teacher Evals"
 author: "Kate OBrien"
 date: "`r Sys.Date()`"
+error: true
 ---
 In this lab, we will be using the `dplyr` package to explore student evaluations
 of teaching data. 
@@ -153,7 +154,13 @@ library(tidyverse)
 ```{r}
 #| label: load-data
 # code chunk for importing the data
-teacher <- read_csv("raw_data/teacher_evals.csv")
+teacher <- read_csv("raw_data/teacher_evals.csv", 
+                  col_type = cols(course_id = col_character(),
+                  teacher_id = col_character(),
+                  academic_degree = col_factor(levels = c('no_dgr',
+                                                         'prof',
+                                                            'ma',
+                                                           'dr'))))
 ```
 
 ### Data Inspection + Summary
@@ -165,16 +172,17 @@ teacher <- read_csv("raw_data/teacher_evals.csv")
 # you may want to use code to answer this question
 glimpse(teacher)
 ```
-This dataset contains a variety of data types, including 
+This dataset contains a variety of data types, including numeric, and categorical. It describes many aspects of university courses offered, including certain professors, the time of the class, and how many days a week it meets.It also provides insights about student data, like the pass rate. It also includes survey data, like the number of questions as well as participants per course.
 
 **4. What is the unit of observation (i.e. a single row in the dataset) identified by?**
 
 ```{r}
 #| label: row-identification
-# you may want to use code to answer this question
+teacher |>
+  print(colnames())
 
 ```
-
+The unit of observation is one course offering by the university.
 **5. Use _one_ `dplyr` pipeline to clean the data by:**
 
 - **renaming the `gender` variable `sex`**
@@ -186,8 +194,11 @@ This dataset contains a variety of data types, including
 
 ```{r}
 #| label: data-cleaning
-# code chunk for Q4
-
+teacher |>
+  rename(sex = gender) |>
+  filter(no_participants >= 10) |> #changed col types above using readr
+  select(c('course_id', 'teacher_id', 'question_no', 'no_participants', 'resp_share', 'SET_score_avg', 'percent_failed_cur', 'academic_degree', 'seniority', 'sex')) |>
+  write_csv(file = 'clean_data/teacher_clean.csv')
 ```
 
 **6. How many unique instructors and unique courses are present in the cleaned dataset?**
@@ -195,23 +206,36 @@ This dataset contains a variety of data types, including
 ```{r}
 #| label: unique-courses
 # code chunk for Q5
+teacher_clean <- read_csv('clean_data/teacher_clean.csv')
+teacher_clean |>
+  distinct(course_id) |>
+  count()
 
+teacher_clean |>
+  distinct(teacher_id) |>
+  count()
 ```
-
+There are 939 distinct courses, and 297 instructors.
 **7. One teacher-course combination has some missing values, coded as `NA`. Which instructor has these missing values? Which course? What variable are the missing values in?**
 
 ```{r}
 #| label: uncovering-missing-values
 # code chunk for Q6
+teacher_clean |>
+  naniar::gg_miss_var()
 
+teacher_clean |>
+  filter(is.na(percent_failed_cur))
 ```
-
+The variable with missing data is percent_failed_cur
 **8. What are the demographics of the instructors in this study? Investigate the variables `academic_degree`, `seniority`, and `sex` and summarize your findings in ~3 complete sentences.**
 
 ```{r}
 #| label: exploring-demographics-of-instructors
 # code chunk for Q7
-
+teacher_clean |>
+  ggplot(aes(x = academic_degree, y = seniority)) +
+  geom_point(aes(color = sex))
 ```
 
 **9. Each course seems to have used a different subset of the nine evaluation questions. How many teacher-course combinations asked all nine questions?**
@@ -219,7 +243,10 @@ This dataset contains a variety of data types, including
 ```{r}
 #| label: teacher-course-asked-every-question
 # code chunk for Q8
-
+teacher_clean |>
+  group_by(teacher_id, course_id) |>
+  summarise(no_asked = n_distinct(question_no)) |>
+  filter(no_asked == '9')
 ```
 
 ## Rate my Professor
@@ -229,7 +256,11 @@ This dataset contains a variety of data types, including
 ```{r}
 #| label: question-1-high-low
 # code chunk for Q9
-
+teacher_clean |>
+  filter(question_no == "901") |>
+  group_by(teacher_id) |>
+  summarise(avg_rating = mean(SET_score_avg)) |>
+  arrange(desc(avg_rating))
 ```
 
 **11. Which instructors with one year of experience had the highest and lowest average percentage of students failing in the current semester across all their courses?**
@@ -237,7 +268,11 @@ This dataset contains a variety of data types, including
 ```{r}
 #| label: one-year-experience-failing-students
 # code chunk for Q10
-
+teacher_clean |>
+  filter(seniority == '1') |>
+  group_by(teacher_id) |>
+  summarise(avg_percent_failed = mean(percent_failed_cur)) |>
+  arrange(desc(avg_percent_failed))
 ```
 
 **12. Which female instructors with either a doctorate or professional degree had the highest and lowest average percent of students responding to the evaluation across all their courses?**
@@ -245,5 +280,10 @@ This dataset contains a variety of data types, including
 ```{r}
 #| label: female-instructor-student-response
 # code chunk for Q11
-
+teacher_clean |>
+  filter(sex == 'female') |>
+  filter(academic_degree == c('dr', 'ma')) |>
+  group_by(teacher_id) |>
+  summarise(avg_respondents_percent = mean(resp_share*100)) |>
+  arrange(desc(avg_respondents_percent))
 ```
